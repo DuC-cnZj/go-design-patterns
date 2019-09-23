@@ -7,7 +7,6 @@ type sayer interface {
 }
 
 type Jack struct {
-
 }
 
 func (jack Jack) say() {
@@ -15,7 +14,6 @@ func (jack Jack) say() {
 }
 
 type Jone struct {
-
 }
 
 func (jone Jone) say() {

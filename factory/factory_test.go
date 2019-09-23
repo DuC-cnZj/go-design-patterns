@@ -11,7 +11,7 @@ func TestConst(t *testing.T) {
 	assert.Equal(t, 4, int(PeachFactory))
 }
 
-func TestCreate(t *testing.T)  {
+func TestCreate(t *testing.T) {
 	apple := Create(AppleFactory)
 	assert.Equal(t, "apple", Get())
 }

@@ -36,6 +36,7 @@ type AObserver struct {
 func (o AObserver) update() {
 	fmt.Println("a observer do sth ....")
 }
+
 type BObserver struct {
 }
 

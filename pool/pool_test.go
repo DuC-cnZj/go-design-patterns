@@ -22,7 +22,7 @@ func TestPool(t *testing.T) {
 			times++
 		}
 
-		if times == 3{
+		if times == 3 {
 			break
 		}
 	}

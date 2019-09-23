@@ -3,7 +3,7 @@ package proxy
 func ExampleCurl() {
 	ab := Ab{}
 
-	proxy := AbProxy{ab:ab}
+	proxy := AbProxy{ab: ab}
 
 	proxy.curl("/duc")
 	proxy.curl("/ab")

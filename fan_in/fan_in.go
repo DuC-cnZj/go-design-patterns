@@ -6,7 +6,7 @@ import (
 )
 
 // Merge different channels in one channel
-func Merge(cs ...<-chan int) <-chan int{
+func Merge(cs ...<-chan int) <-chan int {
 	var wg sync.WaitGroup
 
 	// 阻塞
