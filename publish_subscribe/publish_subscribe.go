@@ -1,68 +1,91 @@
+// Package pubsub implements a simple multi-topic pub-sub library.
 package publish_subscribe
 
 import (
-	"errors"
+	"sync"
 	"time"
 )
 
-type Message struct {
-	Subscription Subscription
+type (
+	subscriber chan interface{}         // 订阅者为一个管道
+	topicFunc  func(v interface{}) bool // 主题为一个过滤器
+)
+
+// 发布者对象
+type Publisher struct {
+	m           sync.RWMutex             // 读写锁
+	buffer      int                      // 订阅队列的缓存大小
+	timeout     time.Duration            // 发布超时时间
+	subscribers map[subscriber]topicFunc // 订阅者信息
 }
 
-type Subscription struct {
-	ch chan Message
-
-	Inbox chan Message
+// 构建一个发布者对象, 可以设置发布超时时间和缓存队列的长度
+func NewPublisher(publishTimeout time.Duration, buffer int) *Publisher {
+	return &Publisher{
+		buffer:      buffer,
+		timeout:     publishTimeout,
+		subscribers: make(map[subscriber]topicFunc),
+	}
 }
 
-type Topic struct {
-	Subscribers    []Session
-	MessageHistory []Message
+// 添加一个新的订阅者，订阅全部主题
+func (p *Publisher) Subscribe() chan interface{} {
+	return p.SubscribeTopic(nil)
 }
 
-type User struct {
-	ID   uint64
-	Name string
+// 添加一个新的订阅者，订阅过滤器筛选后的主题
+func (p *Publisher) SubscribeTopic(topic topicFunc) chan interface{} {
+	ch := make(chan interface{}, p.buffer)
+	p.m.Lock()
+	p.subscribers[ch] = topic
+	p.m.Unlock()
+	return ch
 }
 
-type Session struct {
-	User      User
-	Timestamp time.Time
+// 退出订阅
+func (p *Publisher) Evict(sub chan interface{}) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	delete(p.subscribers, sub)
+	close(sub)
 }
 
-func (s *Subscription) Publish(msg Message) error {
-	if _, ok := <-s.ch; !ok {
-		return errors.New("Topic has been closed")
+// 发布一个主题
+func (p *Publisher) Publish(v interface{}) {
+	p.m.RLock()
+	defer p.m.RUnlock()
+
+	var wg sync.WaitGroup
+	for sub, topic := range p.subscribers {
+		wg.Add(1)
+		go p.sendTopic(sub, topic, v, &wg)
+	}
+	wg.Wait()
+}
+
+// 关闭发布者对象，同时关闭所有的订阅者管道。
+func (p *Publisher) Close() {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	for sub := range p.subscribers {
+		delete(p.subscribers, sub)
+		close(sub)
+	}
+}
+
+// 发送主题，可以容忍一定的超时
+func (p *Publisher) sendTopic(
+	sub subscriber, topic topicFunc, v interface{}, wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+	if topic != nil && !topic(v) {
+		return
 	}
 
-	s.ch <- msg
-
-	return nil
-}
-
-func (t *Topic) Subscribe(uid uint64) (Subscription, error) {
-	// Get session and create one if it's the first
-	for _, subscriber := range t.Subscribers {
-		if subscriber.User.ID == uid {
-			return Subscription{}, nil
-		}
+	select {
+	case sub <- v:
+	case <-time.After(p.timeout):
 	}
-	// Add session to the Topic & MessageHistory
-	t.Subscribers = append(
-		t.Subscribers,
-		Session{
-			User:      User{ID: uid, Name: string(uid)},
-			Timestamp: time.Now(),
-		})
-
-	// Create a subscription
-	//t.MessageHistory
-}
-
-func (t *Topic) Unsubscribe(Subscription) error {
-	// Implementation
-}
-
-func (t *Topic) Delete() error {
-	// Implementation
 }
