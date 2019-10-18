@@ -10,7 +10,6 @@ type middleware func(http.HandlerFunc) http.HandlerFunc
 
 type Pipeline struct {
 	middlewares []middleware
-	handler     http.HandlerFunc
 }
 
 func (p *Pipeline) through(m ...middleware) *Pipeline {
@@ -36,7 +35,6 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
 	pipeline := &Pipeline{}
 	send := pipeline.through(func(handlerFunc http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
