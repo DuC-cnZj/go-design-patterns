@@ -11,6 +11,8 @@ func ExamplePipeline() {
 
 	p.through(func(m myFunc) myFunc {
 		return func(i ...interface{}) {
+			//defer func(t time.Time) {fmt.Println("请求的执行时间是", time.Since(t))}(time.Now())
+
 			fmt.Println("in")
 			m(i...)
 			fmt.Println("out")
